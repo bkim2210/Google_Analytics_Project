@@ -1,0 +1,118 @@
+### **Introduction**
+The case study was part of Google Data Analytics Professional Certifications. The case study resolve around a fictional company Cyclistic bike-share. The director of marketing for  Cyclistic bike-share would like maximize the number of annual memberships by converting casual riders(non-members) to annual memberships. The director of marketing beleives maximizing members will help with company's future growth.
+
+### **Ask**
+Three questions will guide the future marketing program:
+1. How do annual members and casual riders use Cyclistic bikes differently?
+2.Why would casual riders buy Cyclistic annual memberships?
+3.How can Cyclistic use digital media to influence casual riders to become members?
+
+### **Preparing the data**
+In this section I downloaded the necessary libraries for the case study; dplyr,tidyverse, and lubricate. Next I downloaded all the data sets that were needed into R and combinded them using rbind()
+```{r}
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+aprilset<-read.csv("202004-divvy-tripdata.csv")
+mayset<-read.csv("202005-divvy-tripdata.csv")
+juneset<-read.csv("202006-divvy-tripdata.csv")
+julyset<-read.csv("202007-divvy-tripdata.csv")
+augustset<-read.csv("202008-divvy-tripdata.csv")
+sepset<-read.csv("202009-divvy-tripdata.csv")
+octset<-read.csv("202010-divvy-tripdata.csv")
+novset<-read.csv("202011-divvy-tripdata.csv")
+decset<-read.csv("202012-divvy-tripdata.csv")
+janset<-read.csv("202101-divvy-tripdata.csv")
+febset<-read.csv("202102-divvy-tripdata.csv")
+marset<-read.csv("202103-divvy-tripdata.csv")
+
+```
+
+```{r}
+allset<-rbind(aprilset,mayset,juneset,julyset,augustset,sepset,octset,novset,decset,janset,febset,marset)
+```
+
+Here I used str() to get the number of rows and the number of variables/columns ariables/columns. Summary() to get the Class and Mode of each variables/columns. Here we see the data sets has 10 variables/columns which are listed in the output.
+```{r}
+str(allset)
+summary(allset)
+```
+
+### **Data Cleanup**
+The code in this section will drop all any NA values and remove and duplicate values with distinct() function. Also the following rows were removed as they do not any input with the companies goals. The following rows were removed rideable_type, start_lat, start_lng, end_lat, and end_lng.
+```{r}
+allset<-allset %>% drop_na() %>% distinct(.keep_all = TRUE) %>% select(-c(rideable_type,start_lat,start_lng,end_lat,end_lng))
+
+```
+
+### **Preparing the Date**
+To prepare the date I made a column called ride_length to get the ride length of all the customers by getting difference of ended_at and started_at. The values in ride_length are in minutes. The customers were categorized in with 4 values; subscriber , members, customer, and casual. I made all the subscriber values changed to member and customer values changed to casual. I made called day_of_week, this column has the days of the week based on dates in started_at. The values in this column are as follows 1=Sunday,2=Monday,3=Tuesday,4=Wednesday,5=Thursday,6=Friday,7=Saturday, and 8=Sunday.
+```{r}
+allset <- allset %>% mutate(ride_length= difftime(ended_at,started_at,units="min"),member_casual = recode(member_casual
+                           ,"Subscriber" = "member"
+                           ,"Customer" = "casual")
+, day_of_week=wday(started_at))%>%filter(ride_length > 0)#1=Sunday
+head(allset)
+```
+
+### **Analyze the Date**
+This code chunk will output  a table with average, maximum, minimum of ride_length categorized by member_casual. We see in this table casual members do have a higher average ride length, while members do have a higher maximum ride length. Interestingly both causal and members have the same minimum ride length.
+
+```{r}
+member_min_max_avg <- allset %>% group_by(member_casual) %>% summarize(avg_ride_length=mean(ride_length),max_ride_length=max(ride_length),min_ride_length=min(ride_length))
+head(member_min_max_avg)
+```
+This table shows the average duration and numbers of ride for each day of the week. While casual members do have a higher average duration for each day; members have a higher number of rides but are not on the bikes as long as casaul member.
+
+```{r}
+allset %>% 
+  mutate(day = wday(started_at, label = TRUE)) %>%  #creates weekday field using wday()
+  group_by(member_casual, day) %>%  #groups by usertype and weekday
+  summarise(number_of_rides = n()							#calculates the number of rides and average duration 
+  ,average_duration = mean(ride_length)) %>% 		# calculates the average duration
+  arrange(day)		
+```
+
+### **Visualizing the Date**
+The graph below shows a bar chart that shows number of rides by members and casual. Here just like the table we can see members generally have a higher number of rides.
+```{r}
+allset %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")+ggtitle("Number of rides by member vs casual")
+
+```
+
+
+This graph shows another bar chat but for average duration by member and casual. Like the table we can see the casual members are on the bikes allot longer but not using them as frequently as members.
+
+```{r}
+allset %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge")+ggtitle("Average duration by member vs casual")
+
+```
+
+## **Conclusion**
+
+### **Finding of the Data**
+Based on the data findings the causal members are using the bikes allot longer then members. This could be casual members are buying single-ride passes and full-day passes in big groups who will not benefit from having an annual membership or people who just are visiting Chicago just for a day and needed it for just one day. Members are people who live in Chicago and need the bikes for daily transportation for work. 
+
+### **Getting casual riders to buy annual memberships**
+To get casual riders to buy annual memberships is to advertis people who commute to the city for work. Cyclistic should partner with CTA or Metra. People who do commuate to the city do have annual membership with CTA or Metra, Cyclistic can have partnership with CTA or Metra to have their services included in their memberships as benefit for having a membership with CTA and Metra. Cyclistic can also have their bikes near the train stops to help promote their memberships.
+
+### **How can Cyclistic use digital media to influence casual riders to become members?**
+Cyclistic can show their advertisement on social media platforms; Instagram and Youtube. Cyclistic can also have a promotion code for thier causal rider when they sign up for an annual memberships that will give them a discount. 
+
